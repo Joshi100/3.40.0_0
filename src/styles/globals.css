@@ -27,19 +27,57 @@
   }
   
   .weather-gradient-day {
-    background: linear-gradient(180deg, #87CEEB 0%, #98D8E8 50%, #F0F8FF 100%);
+    background: linear-gradient(180deg, var(--color-day-start) 0%, var(--color-day-mid) 50%, var(--color-day-end) 100%);
   }
   
   .weather-gradient-dawn {
-    background: linear-gradient(180deg, #FFB347 0%, #FFCCCB 30%, #87CEEB 70%, #F0F8FF 100%);
+    background: linear-gradient(180deg, var(--color-dawn-start) 0%, var(--color-dawn-mid) 30%, var(--color-dawn-end) 70%, var(--color-day-end) 100%);
   }
   
   .weather-gradient-dusk {
-    background: linear-gradient(180deg, #FF6B6B 0%, #4ECDC4 30%, #45B7D1 70%, #96CEB4 100%);
+    background: linear-gradient(180deg, var(--color-dusk-start) 0%, var(--color-dusk-mid) 30%, var(--color-dusk-end) 70%, var(--color-night-start) 100%);
   }
   
   .weather-gradient-night {
-    background: linear-gradient(180deg, #0F172A 0%, #1E293B 30%, #334155 70%, #475569 100%);
+    background: linear-gradient(180deg, var(--color-night-start) 0%, var(--color-night-mid) 30%, var(--color-night-end) 70%, var(--color-dusk-end) 100%);
+  }
+
+  /* Moon phase clip paths */
+  .clip-path-crescent-right {
+    clip-path: polygon(0 0, 50% 0, 70% 50%, 50% 100%, 0 100%);
+  }
+  
+  .clip-path-half-right {
+    clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  }
+  
+  .clip-path-gibbous-right {
+    clip-path: polygon(0 0, 30% 0, 30% 100%, 0 100%);
+  }
+  
+  .clip-path-crescent-left {
+    clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%, 30% 50%);
+  }
+  
+  .clip-path-half-left {
+    clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);
+  }
+  
+  .clip-path-gibbous-left {
+    clip-path: polygon(70% 0, 100% 0, 100% 100%, 70% 100%);
+  }
+
+  /* Weather elements */
+  .fill-cloud {
+    fill: var(--color-cloud);
+  }
+
+  .fill-sun {
+    fill: var(--color-sun);
+  }
+
+  .fill-moon {
+    fill: var(--color-moon);
   }
   
   .task-card {
