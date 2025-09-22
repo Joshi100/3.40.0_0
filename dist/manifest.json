@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Manage - Personalized Dashboard",
+  "version": "1.0.0",
+  "description": "A personalized new tab dashboard with weather animations, curated feeds, task planning, and AI-powered features",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "sidePanel",
+    "identity",
+    "alarms",
+    "geolocation"
+  ],
+  "host_permissions": [
+    "https://api.openweathermap.org/*",
+    "https://newsapi.org/*",
+    "https://www.googleapis.com/*"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Open Manage Side Panel",
+    "default_icon": {
+      "16": "icons/icon16.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
