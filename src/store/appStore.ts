@@ -1,213 +1,259 @@
 import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
-
-export interface UserPreferences {
-  name: string
-  interests: string[]
-  location?: { lat: number; lon: number; city: string }
-  weatherEnabled: boolean
-  feedEnabled: boolean
-  tasksEnabled: boolean
-  googleTasksSync: boolean
-  theme: 'auto' | 'light' | 'dark'
-}
+import { persist } from 'zustand/middleware'
+import { getCurrentLocation, getWeatherData } from '@/services/weatherService'
 
 export interface WeatherData {
-  temperature: number
-  condition: string
-  description: string
-  icon: string
-  humidity: number
-  windSpeed: number
-  precipitation?: number
-  timestamp: number
+  condition: string;
+  temperature: number;
+  description: string;
+  location: {
+    lat: number;
+    lon: number;
+    name: string;
+  };
+}
+
+export interface UserPreferences {
+  name?: string;
+  interests: string[];
+  location?: {
+    lat: number;
+    lon: number;
+    city?: string;
+  };
+  theme: 'light' | 'dark' | 'system';
+  layout?: {
+    [key: string]: {
+      x: number;
+      y: number;
+    };
+  };
+  weatherEnabled: boolean;
+  feedEnabled: boolean;
+  tasksEnabled: boolean;
+  googleTasksSync: boolean;
 }
 
 export interface FeedItem {
-  id: string
-  title: string
-  description: string
-  url: string
-  source: string
-  publishedAt: string
-  imageUrl?: string
-  aiSummary?: string
-  relevanceScore?: number
-  tags?: string[]
-  userRating?: 'up' | 'down'
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  source: string;
+  publishedAt: string;
+  imageUrl?: string;
+  aiSummary?: string;
+  relevanceScore?: number;
+  tags?: string[];
+  userRating?: 'up' | 'down';
 }
 
 export interface Task {
-  id: string
-  title: string
-  description?: string
-  completed: boolean
-  createdAt: string
-  dueDate?: string
-  priority: 'low' | 'medium' | 'high'
-  aiSuggestions?: string[]
-  googleTaskId?: string
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  createdAt: string;
+  dueDate?: string;
+  priority: 'low' | 'medium' | 'high';
+  aiSuggestions?: string[];
+  googleTaskId?: string;
 }
 
 interface AppState {
   // Onboarding & Settings
-  isOnboarded: boolean
-  showSettings: boolean
-  userPreferences: UserPreferences
+  isOnboarded: boolean;
+  showSettings: boolean;
+  userPreferences: UserPreferences;
   
   // Weather
-  weatherData: WeatherData | null
-  weatherLoading: boolean
+  weatherData: WeatherData | null;
+  weatherLoading: boolean;
   
   // Feed
-  feedItems: FeedItem[]
-  feedLoading: boolean
-  lastFeedUpdate: number
+  feedItems: FeedItem[];
+  feedLoading: boolean;
+  lastFeedUpdate: number;
   
   // Tasks
-  tasks: Task[]
-  tasksLoading: boolean
+  tasks: Task[];
+  tasksLoading: boolean;
   
   // Actions
-  setOnboarded: (onboarded: boolean) => void
-  setShowSettings: (show: boolean) => void
-  updateUserPreferences: (preferences: Partial<UserPreferences>) => void
-  setWeatherData: (data: WeatherData | null) => void
-  setWeatherLoading: (loading: boolean) => void
-  setFeedItems: (items: FeedItem[]) => void
-  setFeedLoading: (loading: boolean) => void
-  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void
-  updateTask: (id: string, updates: Partial<Task>) => void
-  deleteTask: (id: string) => void
-  toggleTask: (id: string) => void
-  rateFeedItem: (id: string, rating: 'up' | 'down') => void
-  initializeApp: () => Promise<void>
-  saveToStorage: () => Promise<void>
-}
-
-const defaultPreferences: UserPreferences = {
-  name: '',
-  interests: [],
-  weatherEnabled: true,
-  feedEnabled: true,
-  tasksEnabled: true,
-  googleTasksSync: false,
-  theme: 'auto'
+  setOnboarded: (onboarded: boolean) => void;
+  setShowSettings: (show: boolean) => void;
+  updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
+  updateLocation: (lat: number, lon: number) => Promise<void>;
+  updateLayoutPosition: (componentId: string, position: { x: number; y: number }) => void;
+  refreshWeather: () => Promise<void>;
+  initializeApp: () => Promise<void>;
+  
+  // Feed Actions
+  setFeedItems: (items: FeedItem[]) => void;
+  setFeedLoading: (loading: boolean) => void;
+  rateFeedItem: (id: string, rating: 'up' | 'down') => void;
+  
+  // Task Actions
+  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
+  deleteTask: (id: string) => void;
+  toggleTask: (id: string) => void;
+  saveToStorage: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>()(
-  subscribeWithSelector((set, get) => ({
-    // Initial state
-    isOnboarded: false,
-    showSettings: false,
-    userPreferences: defaultPreferences,
-    weatherData: null,
-    weatherLoading: false,
-    feedItems: [],
-    feedLoading: false,
-    lastFeedUpdate: 0,
-    tasks: [],
-    tasksLoading: false,
+  persist(
+    (set, get) => ({
+      // Initial State
+      isOnboarded: false,
+      showSettings: false,
+      userPreferences: {
+        theme: 'system',
+        layout: {},
+        weatherEnabled: true,
+        feedEnabled: true,
+        tasksEnabled: true,
+        interests: [],
+        googleTasksSync: false,
+        name: '',
+      },
+      weatherData: null,
+      weatherLoading: false,
+      feedItems: [],
+      feedLoading: false,
+      lastFeedUpdate: 0,
+      tasks: [],
+      tasksLoading: false,
 
-    // Actions
-    setOnboarded: (onboarded) => set({ isOnboarded: onboarded }),
-    setShowSettings: (show) => set({ showSettings: show }),
-    
-    updateUserPreferences: (preferences) => {
-      set((state) => ({
-        userPreferences: { ...state.userPreferences, ...preferences }
-      }))
-      get().saveToStorage()
-    },
-    
-    setWeatherData: (data) => set({ weatherData: data }),
-    setWeatherLoading: (loading) => set({ weatherLoading: loading }),
-    
-    setFeedItems: (items) => {
-      set({ feedItems: items, lastFeedUpdate: Date.now() })
-      get().saveToStorage()
-    },
-    setFeedLoading: (loading) => set({ feedLoading: loading }),
-    
-    addTask: (taskData) => {
-      const task: Task = {
-        ...taskData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString()
-      }
-      set((state) => ({ tasks: [...state.tasks, task] }))
-      get().saveToStorage()
-    },
-    
-    updateTask: (id, updates) => {
-      set((state) => ({
-        tasks: state.tasks.map(task => 
-          task.id === id ? { ...task, ...updates } : task
-        )
-      }))
-      get().saveToStorage()
-    },
-    
-    deleteTask: (id) => {
-      set((state) => ({
-        tasks: state.tasks.filter(task => task.id !== id)
-      }))
-      get().saveToStorage()
-    },
-    
-    toggleTask: (id) => {
-      set((state) => ({
-        tasks: state.tasks.map(task =>
-          task.id === id ? { ...task, completed: !task.completed } : task
-        )
-      }))
-      get().saveToStorage()
-    },
-    
-    rateFeedItem: (id, rating) => {
-      set((state) => ({
-        feedItems: state.feedItems.map(item =>
-          item.id === id ? { ...item, userRating: rating } : item
-        )
-      }))
-      get().saveToStorage()
-    },
+      // Onboarding & Settings Actions
+      setOnboarded: (onboarded: boolean) => set({ isOnboarded: onboarded }),
+      setShowSettings: (show: boolean) => set({ showSettings: show }),
+      updateUserPreferences: (preferences: Partial<UserPreferences>) => {
+        set((state) => ({
+          userPreferences: {
+            ...state.userPreferences,
+            ...preferences,
+          },
+        }));
+      },
+      
+      // Weather Actions
+      updateLocation: async (lat: number, lon: number) => {
+        set((state) => ({
+          userPreferences: {
+            ...state.userPreferences,
+            location: { lat, lon },
+          },
+          weatherLoading: true
+        }));
+        await get().refreshWeather();
+      },
+      
+      updateLayoutPosition: (componentId: string, position: { x: number; y: number }) => {
+        set((state) => ({
+          userPreferences: {
+            ...state.userPreferences,
+            layout: {
+              ...state.userPreferences.layout,
+              [componentId]: position,
+            },
+          },
+        }));
+      },
+      
+      refreshWeather: async () => {
+        const { userPreferences } = get();
+        if (!userPreferences.location) return;
 
-    initializeApp: async () => {
-      try {
-        const result = await chrome.storage.local.get([
-          'isOnboarded',
-          'userPreferences', 
-          'feedItems',
-          'tasks',
-          'lastFeedUpdate'
-        ])
+        try {
+          const weatherData = await getWeatherData(
+            userPreferences.location.lat,
+            userPreferences.location.lon
+          );
+          set({ weatherData, weatherLoading: false });
+        } catch (error) {
+          console.error('Failed to refresh weather:', error);
+          set({ weatherLoading: false });
+        }
+      },
+      
+      // Feed Actions
+      setFeedItems: (items: FeedItem[]) => {
+        set({ 
+          feedItems: items,
+          lastFeedUpdate: Date.now()
+        });
+      },
+      setFeedLoading: (loading: boolean) => set({ feedLoading: loading }),
+      rateFeedItem: (id: string, rating: 'up' | 'down') => {
+        set((state) => ({
+          feedItems: state.feedItems.map(item =>
+            item.id === id ? { ...item, userRating: rating } : item
+          )
+        }));
+      },
+      
+      // Task Actions
+      addTask: (task: Omit<Task, 'id' | 'createdAt'>) => {
+        const id = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newTask: Task = {
+          ...task,
+          id,
+          createdAt: new Date().toISOString(),
+          completed: false,
+        };
         
-        set({
-          isOnboarded: result.isOnboarded || false,
-          userPreferences: { ...defaultPreferences, ...result.userPreferences },
-          feedItems: result.feedItems || [],
-          tasks: result.tasks || [],
-          lastFeedUpdate: result.lastFeedUpdate || 0
-        })
-      } catch (error) {
-        console.error('Failed to initialize app:', error)
-      }
-    },
-
-    saveToStorage: async () => {
-      try {
-        const state = get()
-        await chrome.storage.local.set({
-          isOnboarded: state.isOnboarded,
-          userPreferences: state.userPreferences,
-          feedItems: state.feedItems,
-          tasks: state.tasks,
-          lastFeedUpdate: state.lastFeedUpdate
-        })
-      } catch (error) {
-        console.error('Failed to save to storage:', error)
-      }
+        set((state) => ({
+          tasks: [...state.tasks, newTask]
+        }));
+      },
+      
+      updateTask: (id: string, updates: Partial<Task>) => {
+        set((state) => ({
+          tasks: state.tasks.map(task =>
+            task.id === id ? { ...task, ...updates } : task
+          )
+        }));
+      },
+      
+      deleteTask: (id: string) => {
+        set((state) => ({
+          tasks: state.tasks.filter(task => task.id !== id)
+        }));
+      },
+      
+      toggleTask: (id: string) => {
+        set((state) => ({
+          tasks: state.tasks.map(task =>
+            task.id === id ? { ...task, completed: !task.completed } : task
+          )
+        }));
+      },
+      
+      saveToStorage: async () => {
+        // This is handled by the persist middleware
+        return Promise.resolve();
+      },
+      
+      // App Initialization
+      initializeApp: async () => {
+        try {
+          const position = await getCurrentLocation();
+          await get().updateLocation(
+            position.coords.latitude,
+            position.coords.longitude
+          );
+          set({ isOnboarded: true });
+        } catch (error) {
+          console.error('Error initializing app:', error);
+          // Set default location if geolocation fails
+          await get().updateLocation(40.7128, -74.0060); // NYC coordinates
+          set({ isOnboarded: true });
+        }
+      },
+    }),
+    {
+      name: 'app-store',
     }
-  }))
+  )
 )

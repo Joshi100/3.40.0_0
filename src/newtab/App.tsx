@@ -7,6 +7,7 @@ import FeedGrid from '@/components/FeedGrid'
 import TaskPanel from '@/components/TaskPanel'
 import Onboarding from '@/components/Onboarding'
 import SettingsPanel from '@/components/SettingsPanel'
+import DraggableComponent from '@/components/DraggableComponent'
 import { Settings } from 'lucide-react'
 
 function App() {
@@ -67,36 +68,53 @@ function App() {
       <div className="relative z-10 min-h-screen">
         <div className="container mx-auto px-6 py-8">
           {/* Header Section */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-8"
+          <DraggableComponent
+            defaultPosition={{ x: 0, y: 0 }}
+            dragConstraints={{ top: 0, left: 0, right: window.innerWidth - 300, bottom: window.innerHeight - 100 }}
+            className="mb-8 w-max"
           >
-            <Greeting />
-          </motion.div>
-
-          {/* Main Grid Layout */}
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 h-[calc(100vh-200px)]">
-            {/* Feed Section - Takes up most space */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="xl:col-span-3"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
             >
-              <FeedGrid />
+              <Greeting />
             </motion.div>
+          </DraggableComponent>
 
-            {/* Task Panel - Right sidebar */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="xl:col-span-1"
+          {/* Main Grid Layout - Now Draggable Components */}
+          <div className="relative h-[calc(100vh-200px)]">
+            {/* Feed Section */}
+            <DraggableComponent
+              defaultPosition={{ x: 0, y: 0 }}
+              dragConstraints={{ top: 0, left: 0, right: window.innerWidth - 800, bottom: window.innerHeight - 600 }}
+              className="absolute"
             >
-              <TaskPanel />
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="w-[800px]"
+              >
+                <FeedGrid />
+              </motion.div>
+            </DraggableComponent>
+
+            {/* Task Panel */}
+            <DraggableComponent
+              defaultPosition={{ x: window.innerWidth - 400, y: 0 }}
+              dragConstraints={{ top: 0, left: 0, right: window.innerWidth - 300, bottom: window.innerHeight - 400 }}
+              className="absolute"
+            >
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="w-[300px]"
+              >
+                <TaskPanel />
+              </motion.div>
+            </DraggableComponent>
           </div>
         </div>
       </div>

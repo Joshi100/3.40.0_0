@@ -1,142 +1,607 @@
-import { c as create, r as reactExports, j as jsxRuntimeExports, m as motion, a as createLucideIcon, S as Sparkles, A as AnimatePresence, b as client, R as React } from './globals-DQiCxdFl.js';
+import { u as useConstant, c as create, r as reactExports, j as jsxRuntimeExports, m as motion, a as createLucideIcon, S as Sparkles, A as AnimatePresence, b as client, R as React } from './globals-BtrmDouG.js';
 
-const subscribeWithSelectorImpl = (fn) => (set, get, api) => {
-  const origSubscribe = api.subscribe;
-  api.subscribe = (selector, optListener, options) => {
-    let listener = selector;
-    if (optListener) {
-      const equalityFn = (options == null ? void 0 : options.equalityFn) || Object.is;
-      let currentSlice = selector(api.getState());
-      listener = (state) => {
-        const nextSlice = selector(state);
-        if (!equalityFn(currentSlice, nextSlice)) {
-          const previousSlice = currentSlice;
-          optListener(currentSlice = nextSlice, previousSlice);
+/**
+ * Can manually trigger a drag gesture on one or more `drag`-enabled `motion` components.
+ *
+ * ```jsx
+ * const dragControls = useDragControls()
+ *
+ * function startDrag(event) {
+ *   dragControls.start(event, { snapToCursor: true })
+ * }
+ *
+ * return (
+ *   <>
+ *     <div onPointerDown={startDrag} />
+ *     <motion.div drag="x" dragControls={dragControls} />
+ *   </>
+ * )
+ * ```
+ *
+ * @public
+ */
+class DragControls {
+    constructor() {
+        this.componentControls = new Set();
+    }
+    /**
+     * Subscribe a component's internal `VisualElementDragControls` to the user-facing API.
+     *
+     * @internal
+     */
+    subscribe(controls) {
+        this.componentControls.add(controls);
+        return () => this.componentControls.delete(controls);
+    }
+    /**
+     * Start a drag gesture on every `motion` component that has this set of drag controls
+     * passed into it via the `dragControls` prop.
+     *
+     * ```jsx
+     * dragControls.start(e, {
+     *   snapToCursor: true
+     * })
+     * ```
+     *
+     * @param event - PointerEvent
+     * @param options - Options
+     *
+     * @public
+     */
+    start(event, options) {
+        this.componentControls.forEach((controls) => {
+            controls.start(event.nativeEvent || event, options);
+        });
+    }
+}
+const createDragControls = () => new DragControls();
+/**
+ * Usually, dragging is initiated by pressing down on a `motion` component with a `drag` prop
+ * and moving it. For some use-cases, for instance clicking at an arbitrary point on a video scrubber, we
+ * might want to initiate that dragging from a different component than the draggable one.
+ *
+ * By creating a `dragControls` using the `useDragControls` hook, we can pass this into
+ * the draggable component's `dragControls` prop. It exposes a `start` method
+ * that can start dragging from pointer events on other components.
+ *
+ * ```jsx
+ * const dragControls = useDragControls()
+ *
+ * function startDrag(event) {
+ *   dragControls.start(event, { snapToCursor: true })
+ * }
+ *
+ * return (
+ *   <>
+ *     <div onPointerDown={startDrag} />
+ *     <motion.div drag="x" dragControls={dragControls} />
+ *   </>
+ * )
+ * ```
+ *
+ * @public
+ */
+function useDragControls() {
+    return useConstant(createDragControls);
+}
+
+const __vite_import_meta_env__ = {};
+function createJSONStorage(getStorage, options) {
+  let storage;
+  try {
+    storage = getStorage();
+  } catch (_e) {
+    return;
+  }
+  const persistStorage = {
+    getItem: (name) => {
+      var _a;
+      const parse = (str2) => {
+        if (str2 === null) {
+          return null;
         }
+        return JSON.parse(str2, void 0 );
       };
-      if (options == null ? void 0 : options.fireImmediately) {
-        optListener(currentSlice, currentSlice);
+      const str = (_a = storage.getItem(name)) != null ? _a : null;
+      if (str instanceof Promise) {
+        return str.then(parse);
       }
-    }
-    return origSubscribe(listener);
+      return parse(str);
+    },
+    setItem: (name, newValue) => storage.setItem(
+      name,
+      JSON.stringify(newValue, void 0 )
+    ),
+    removeItem: (name) => storage.removeItem(name)
   };
-  const initialState = fn(set, get, api);
-  return initialState;
-};
-const subscribeWithSelector = subscribeWithSelectorImpl;
-
-const defaultPreferences = {
-  name: "",
-  interests: [],
-  weatherEnabled: true,
-  feedEnabled: true,
-  tasksEnabled: true,
-  googleTasksSync: false,
-  theme: "auto"
-};
-const useAppStore = create()(
-  subscribeWithSelector((set, get) => ({
-    // Initial state
-    isOnboarded: false,
-    showSettings: false,
-    userPreferences: defaultPreferences,
-    weatherData: null,
-    weatherLoading: false,
-    feedItems: [],
-    feedLoading: false,
-    lastFeedUpdate: 0,
-    tasks: [],
-    tasksLoading: false,
-    // Actions
-    setOnboarded: (onboarded) => set({ isOnboarded: onboarded }),
-    setShowSettings: (show) => set({ showSettings: show }),
-    updateUserPreferences: (preferences) => {
-      set((state) => ({
-        userPreferences: { ...state.userPreferences, ...preferences }
-      }));
-      get().saveToStorage();
-    },
-    setWeatherData: (data) => set({ weatherData: data }),
-    setWeatherLoading: (loading) => set({ weatherLoading: loading }),
-    setFeedItems: (items) => {
-      set({ feedItems: items, lastFeedUpdate: Date.now() });
-      get().saveToStorage();
-    },
-    setFeedLoading: (loading) => set({ feedLoading: loading }),
-    addTask: (taskData) => {
-      const task = {
-        ...taskData,
-        id: crypto.randomUUID(),
-        createdAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      set((state) => ({ tasks: [...state.tasks, task] }));
-      get().saveToStorage();
-    },
-    updateTask: (id, updates) => {
-      set((state) => ({
-        tasks: state.tasks.map(
-          (task) => task.id === id ? { ...task, ...updates } : task
-        )
-      }));
-      get().saveToStorage();
-    },
-    deleteTask: (id) => {
-      set((state) => ({
-        tasks: state.tasks.filter((task) => task.id !== id)
-      }));
-      get().saveToStorage();
-    },
-    toggleTask: (id) => {
-      set((state) => ({
-        tasks: state.tasks.map(
-          (task) => task.id === id ? { ...task, completed: !task.completed } : task
-        )
-      }));
-      get().saveToStorage();
-    },
-    rateFeedItem: (id, rating) => {
-      set((state) => ({
-        feedItems: state.feedItems.map(
-          (item) => item.id === id ? { ...item, userRating: rating } : item
-        )
-      }));
-      get().saveToStorage();
-    },
-    initializeApp: async () => {
-      try {
-        const result = await chrome.storage.local.get([
-          "isOnboarded",
-          "userPreferences",
-          "feedItems",
-          "tasks",
-          "lastFeedUpdate"
-        ]);
-        set({
-          isOnboarded: result.isOnboarded || false,
-          userPreferences: { ...defaultPreferences, ...result.userPreferences },
-          feedItems: result.feedItems || [],
-          tasks: result.tasks || [],
-          lastFeedUpdate: result.lastFeedUpdate || 0
-        });
-      } catch (error) {
-        console.error("Failed to initialize app:", error);
-      }
-    },
-    saveToStorage: async () => {
-      try {
-        const state = get();
-        await chrome.storage.local.set({
-          isOnboarded: state.isOnboarded,
-          userPreferences: state.userPreferences,
-          feedItems: state.feedItems,
-          tasks: state.tasks,
-          lastFeedUpdate: state.lastFeedUpdate
-        });
-      } catch (error) {
-        console.error("Failed to save to storage:", error);
-      }
+  return persistStorage;
+}
+const toThenable = (fn) => (input) => {
+  try {
+    const result = fn(input);
+    if (result instanceof Promise) {
+      return result;
     }
-  }))
+    return {
+      then(onFulfilled) {
+        return toThenable(onFulfilled)(result);
+      },
+      catch(_onRejected) {
+        return this;
+      }
+    };
+  } catch (e) {
+    return {
+      then(_onFulfilled) {
+        return this;
+      },
+      catch(onRejected) {
+        return toThenable(onRejected)(e);
+      }
+    };
+  }
+};
+const oldImpl = (config, baseOptions) => (set, get, api) => {
+  let options = {
+    getStorage: () => localStorage,
+    serialize: JSON.stringify,
+    deserialize: JSON.parse,
+    partialize: (state) => state,
+    version: 0,
+    merge: (persistedState, currentState) => ({
+      ...currentState,
+      ...persistedState
+    }),
+    ...baseOptions
+  };
+  let hasHydrated = false;
+  const hydrationListeners = /* @__PURE__ */ new Set();
+  const finishHydrationListeners = /* @__PURE__ */ new Set();
+  let storage;
+  try {
+    storage = options.getStorage();
+  } catch (_e) {
+  }
+  if (!storage) {
+    return config(
+      (...args) => {
+        console.warn(
+          `[zustand persist middleware] Unable to update item '${options.name}', the given storage is currently unavailable.`
+        );
+        set(...args);
+      },
+      get,
+      api
+    );
+  }
+  const thenableSerialize = toThenable(options.serialize);
+  const setItem = () => {
+    const state = options.partialize({ ...get() });
+    let errorInSync;
+    const thenable = thenableSerialize({ state, version: options.version }).then(
+      (serializedValue) => storage.setItem(options.name, serializedValue)
+    ).catch((e) => {
+      errorInSync = e;
+    });
+    if (errorInSync) {
+      throw errorInSync;
+    }
+    return thenable;
+  };
+  const savedSetState = api.setState;
+  api.setState = (state, replace) => {
+    savedSetState(state, replace);
+    void setItem();
+  };
+  const configResult = config(
+    (...args) => {
+      set(...args);
+      void setItem();
+    },
+    get,
+    api
+  );
+  let stateFromStorage;
+  const hydrate = () => {
+    var _a;
+    if (!storage) return;
+    hasHydrated = false;
+    hydrationListeners.forEach((cb) => cb(get()));
+    const postRehydrationCallback = ((_a = options.onRehydrateStorage) == null ? void 0 : _a.call(options, get())) || void 0;
+    return toThenable(storage.getItem.bind(storage))(options.name).then((storageValue) => {
+      if (storageValue) {
+        return options.deserialize(storageValue);
+      }
+    }).then((deserializedStorageValue) => {
+      if (deserializedStorageValue) {
+        if (typeof deserializedStorageValue.version === "number" && deserializedStorageValue.version !== options.version) {
+          if (options.migrate) {
+            return options.migrate(
+              deserializedStorageValue.state,
+              deserializedStorageValue.version
+            );
+          }
+          console.error(
+            `State loaded from storage couldn't be migrated since no migrate function was provided`
+          );
+        } else {
+          return deserializedStorageValue.state;
+        }
+      }
+    }).then((migratedState) => {
+      var _a2;
+      stateFromStorage = options.merge(
+        migratedState,
+        (_a2 = get()) != null ? _a2 : configResult
+      );
+      set(stateFromStorage, true);
+      return setItem();
+    }).then(() => {
+      postRehydrationCallback == null ? void 0 : postRehydrationCallback(stateFromStorage, void 0);
+      hasHydrated = true;
+      finishHydrationListeners.forEach((cb) => cb(stateFromStorage));
+    }).catch((e) => {
+      postRehydrationCallback == null ? void 0 : postRehydrationCallback(void 0, e);
+    });
+  };
+  api.persist = {
+    setOptions: (newOptions) => {
+      options = {
+        ...options,
+        ...newOptions
+      };
+      if (newOptions.getStorage) {
+        storage = newOptions.getStorage();
+      }
+    },
+    clearStorage: () => {
+      storage == null ? void 0 : storage.removeItem(options.name);
+    },
+    getOptions: () => options,
+    rehydrate: () => hydrate(),
+    hasHydrated: () => hasHydrated,
+    onHydrate: (cb) => {
+      hydrationListeners.add(cb);
+      return () => {
+        hydrationListeners.delete(cb);
+      };
+    },
+    onFinishHydration: (cb) => {
+      finishHydrationListeners.add(cb);
+      return () => {
+        finishHydrationListeners.delete(cb);
+      };
+    }
+  };
+  hydrate();
+  return stateFromStorage || configResult;
+};
+const newImpl = (config, baseOptions) => (set, get, api) => {
+  let options = {
+    storage: createJSONStorage(() => localStorage),
+    partialize: (state) => state,
+    version: 0,
+    merge: (persistedState, currentState) => ({
+      ...currentState,
+      ...persistedState
+    }),
+    ...baseOptions
+  };
+  let hasHydrated = false;
+  const hydrationListeners = /* @__PURE__ */ new Set();
+  const finishHydrationListeners = /* @__PURE__ */ new Set();
+  let storage = options.storage;
+  if (!storage) {
+    return config(
+      (...args) => {
+        console.warn(
+          `[zustand persist middleware] Unable to update item '${options.name}', the given storage is currently unavailable.`
+        );
+        set(...args);
+      },
+      get,
+      api
+    );
+  }
+  const setItem = () => {
+    const state = options.partialize({ ...get() });
+    return storage.setItem(options.name, {
+      state,
+      version: options.version
+    });
+  };
+  const savedSetState = api.setState;
+  api.setState = (state, replace) => {
+    savedSetState(state, replace);
+    void setItem();
+  };
+  const configResult = config(
+    (...args) => {
+      set(...args);
+      void setItem();
+    },
+    get,
+    api
+  );
+  api.getInitialState = () => configResult;
+  let stateFromStorage;
+  const hydrate = () => {
+    var _a, _b;
+    if (!storage) return;
+    hasHydrated = false;
+    hydrationListeners.forEach((cb) => {
+      var _a2;
+      return cb((_a2 = get()) != null ? _a2 : configResult);
+    });
+    const postRehydrationCallback = ((_b = options.onRehydrateStorage) == null ? void 0 : _b.call(options, (_a = get()) != null ? _a : configResult)) || void 0;
+    return toThenable(storage.getItem.bind(storage))(options.name).then((deserializedStorageValue) => {
+      if (deserializedStorageValue) {
+        if (typeof deserializedStorageValue.version === "number" && deserializedStorageValue.version !== options.version) {
+          if (options.migrate) {
+            return [
+              true,
+              options.migrate(
+                deserializedStorageValue.state,
+                deserializedStorageValue.version
+              )
+            ];
+          }
+          console.error(
+            `State loaded from storage couldn't be migrated since no migrate function was provided`
+          );
+        } else {
+          return [false, deserializedStorageValue.state];
+        }
+      }
+      return [false, void 0];
+    }).then((migrationResult) => {
+      var _a2;
+      const [migrated, migratedState] = migrationResult;
+      stateFromStorage = options.merge(
+        migratedState,
+        (_a2 = get()) != null ? _a2 : configResult
+      );
+      set(stateFromStorage, true);
+      if (migrated) {
+        return setItem();
+      }
+    }).then(() => {
+      postRehydrationCallback == null ? void 0 : postRehydrationCallback(stateFromStorage, void 0);
+      stateFromStorage = get();
+      hasHydrated = true;
+      finishHydrationListeners.forEach((cb) => cb(stateFromStorage));
+    }).catch((e) => {
+      postRehydrationCallback == null ? void 0 : postRehydrationCallback(void 0, e);
+    });
+  };
+  api.persist = {
+    setOptions: (newOptions) => {
+      options = {
+        ...options,
+        ...newOptions
+      };
+      if (newOptions.storage) {
+        storage = newOptions.storage;
+      }
+    },
+    clearStorage: () => {
+      storage == null ? void 0 : storage.removeItem(options.name);
+    },
+    getOptions: () => options,
+    rehydrate: () => hydrate(),
+    hasHydrated: () => hasHydrated,
+    onHydrate: (cb) => {
+      hydrationListeners.add(cb);
+      return () => {
+        hydrationListeners.delete(cb);
+      };
+    },
+    onFinishHydration: (cb) => {
+      finishHydrationListeners.add(cb);
+      return () => {
+        finishHydrationListeners.delete(cb);
+      };
+    }
+  };
+  if (!options.skipHydration) {
+    hydrate();
+  }
+  return stateFromStorage || configResult;
+};
+const persistImpl = (config, baseOptions) => {
+  if ("getStorage" in baseOptions || "serialize" in baseOptions || "deserialize" in baseOptions) {
+    if ((__vite_import_meta_env__ ? "production" : void 0) !== "production") {
+      console.warn(
+        "[DEPRECATED] `getStorage`, `serialize` and `deserialize` options are deprecated. Use `storage` option instead."
+      );
+    }
+    return oldImpl(config, baseOptions);
+  }
+  return newImpl(config, baseOptions);
+};
+const persist = persistImpl;
+
+var define_process_env_default = {};
+const getWeatherData = async (lat, lon) => {
+  try {
+    const geocodeResponse = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${define_process_env_default.VITE_GOOGLE_API_KEY}`
+    );
+    const geocodeData = await geocodeResponse.json();
+    const locationName = geocodeData.results[0]?.formatted_address || "Unknown Location";
+    const weatherResponse = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${define_process_env_default.VITE_OPENWEATHER_API_KEY}&units=metric`
+    );
+    const weatherData = await weatherResponse.json();
+    return {
+      condition: weatherData.weather[0].main,
+      temperature: weatherData.main.temp,
+      description: weatherData.weather[0].description,
+      location: {
+        lat,
+        lon,
+        name: locationName
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching weather data:", error);
+    throw error;
+  }
+};
+const getCurrentLocation = () => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported by your browser"));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 5e3,
+      maximumAge: 0
+    });
+  });
+};
+
+const useAppStore = create()(
+  persist(
+    (set, get) => ({
+      // Initial State
+      isOnboarded: false,
+      showSettings: false,
+      userPreferences: {
+        theme: "system",
+        layout: {},
+        weatherEnabled: true,
+        feedEnabled: true,
+        tasksEnabled: true,
+        interests: [],
+        googleTasksSync: false,
+        name: ""
+      },
+      weatherData: null,
+      weatherLoading: false,
+      feedItems: [],
+      feedLoading: false,
+      lastFeedUpdate: 0,
+      tasks: [],
+      tasksLoading: false,
+      // Onboarding & Settings Actions
+      setOnboarded: (onboarded) => set({ isOnboarded: onboarded }),
+      setShowSettings: (show) => set({ showSettings: show }),
+      updateUserPreferences: (preferences) => {
+        set((state) => ({
+          userPreferences: {
+            ...state.userPreferences,
+            ...preferences
+          }
+        }));
+      },
+      // Weather Actions
+      updateLocation: async (lat, lon) => {
+        set((state) => ({
+          userPreferences: {
+            ...state.userPreferences,
+            location: { lat, lon }
+          },
+          weatherLoading: true
+        }));
+        await get().refreshWeather();
+      },
+      updateLayoutPosition: (componentId, position) => {
+        set((state) => ({
+          userPreferences: {
+            ...state.userPreferences,
+            layout: {
+              ...state.userPreferences.layout,
+              [componentId]: position
+            }
+          }
+        }));
+      },
+      refreshWeather: async () => {
+        const { userPreferences } = get();
+        if (!userPreferences.location) return;
+        try {
+          const weatherData = await getWeatherData(
+            userPreferences.location.lat,
+            userPreferences.location.lon
+          );
+          set({ weatherData, weatherLoading: false });
+        } catch (error) {
+          console.error("Failed to refresh weather:", error);
+          set({ weatherLoading: false });
+        }
+      },
+      // Feed Actions
+      setFeedItems: (items) => {
+        set({
+          feedItems: items,
+          lastFeedUpdate: Date.now()
+        });
+      },
+      setFeedLoading: (loading) => set({ feedLoading: loading }),
+      rateFeedItem: (id, rating) => {
+        set((state) => ({
+          feedItems: state.feedItems.map(
+            (item) => item.id === id ? { ...item, userRating: rating } : item
+          )
+        }));
+      },
+      // Task Actions
+      addTask: (task) => {
+        const id = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newTask = {
+          ...task,
+          id,
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          completed: false
+        };
+        set((state) => ({
+          tasks: [...state.tasks, newTask]
+        }));
+      },
+      updateTask: (id, updates) => {
+        set((state) => ({
+          tasks: state.tasks.map(
+            (task) => task.id === id ? { ...task, ...updates } : task
+          )
+        }));
+      },
+      deleteTask: (id) => {
+        set((state) => ({
+          tasks: state.tasks.filter((task) => task.id !== id)
+        }));
+      },
+      toggleTask: (id) => {
+        set((state) => ({
+          tasks: state.tasks.map(
+            (task) => task.id === id ? { ...task, completed: !task.completed } : task
+          )
+        }));
+      },
+      saveToStorage: async () => {
+        return Promise.resolve();
+      },
+      // App Initialization
+      initializeApp: async () => {
+        try {
+          const position = await getCurrentLocation();
+          await get().updateLocation(
+            position.coords.latitude,
+            position.coords.longitude
+          );
+          set({ isOnboarded: true });
+        } catch (error) {
+          console.error("Error initializing app:", error);
+          await get().updateLocation(40.7128, -74.006);
+          set({ isOnboarded: true });
+        }
+      }
+    }),
+    {
+      name: "app-store"
+    }
+  )
 );
 
 var suncalc = {exports: {}};
@@ -460,6 +925,15 @@ var suncalc = {exports: {}};
 
 var suncalcExports = suncalc.exports;
 
+const calculateArcPath = (width, height) => {
+  const startX = 0;
+  const startY = height;
+  const endX = width;
+  const endY = height;
+  const controlX = width / 2;
+  const controlY = 0;
+  return `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`;
+};
 const WeatherAnimation = () => {
   const { userPreferences, weatherData } = useAppStore();
   const [sunMoonPos, setSunMoonPos] = reactExports.useState({
@@ -541,7 +1015,55 @@ const WeatherAnimation = () => {
         return "weather-gradient-day";
     }
   };
+  const getMoonPhase = () => {
+    const now = /* @__PURE__ */ new Date();
+    const moonIllumination = suncalcExports.getMoonIllumination(now);
+    const phase = moonIllumination.phase;
+    if (phase <= 0.05 || phase > 0.95) return "new";
+    if (phase <= 0.2) return "waxingCrescent";
+    if (phase <= 0.3) return "firstQuarter";
+    if (phase <= 0.45) return "waxingGibbous";
+    if (phase <= 0.55) return "full";
+    if (phase <= 0.7) return "waningGibbous";
+    if (phase <= 0.8) return "lastQuarter";
+    return "waningCrescent";
+  };
+  const hourMarkers = reactExports.useMemo(() => {
+    return Array.from({ length: 24 }, (_, i) => {
+      const progress = i / 23;
+      const x = progress * 100;
+      const y = 50 - Math.sin(progress * Math.PI) * 30;
+      return { x, y, hour: i };
+    });
+  }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `fixed inset-0 ${getBackgroundGradient()} transition-all duration-1000`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "absolute inset-0 w-full h-full", preserveAspectRatio: "none", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("defs", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "arcGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", className: "text-yellow-300" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "50%", className: "text-orange-400" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", className: "text-yellow-300" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "path",
+        {
+          d: calculateArcPath(100, 50),
+          fill: "none",
+          stroke: "rgba(255,255,255,0.1)",
+          strokeWidth: "2",
+          className: "transform scale-100"
+        }
+      ),
+      hourMarkers.map(({ x, y, hour }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "circle",
+        {
+          cx: `${x}%`,
+          cy: `${y}%`,
+          r: "4",
+          className: "fill-white/20"
+        },
+        hour
+      ))
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 overflow-hidden", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         motion.div,
@@ -549,9 +1071,9 @@ const WeatherAnimation = () => {
           className: "cloud cloud-1 absolute top-20 opacity-80",
           style: { left: "-100px" },
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "120", height: "60", viewBox: "0 0 120 60", fill: "none", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("ellipse", { cx: "30", cy: "40", rx: "25", ry: "15", fill: "white", opacity: "0.8" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("ellipse", { cx: "60", cy: "35", rx: "35", ry: "20", fill: "white", opacity: "0.9" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("ellipse", { cx: "90", cy: "40", rx: "25", ry: "15", fill: "white", opacity: "0.8" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("ellipse", { cx: "30", cy: "40", rx: "25", ry: "15", className: "fill-cloud", opacity: "0.8" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("ellipse", { cx: "60", cy: "35", rx: "35", ry: "20", className: "fill-cloud", opacity: "0.9" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("ellipse", { cx: "90", cy: "40", rx: "25", ry: "15", className: "fill-cloud", opacity: "0.8" })
           ] })
         }
       ),
@@ -600,12 +1122,12 @@ const WeatherAnimation = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             motion.div,
             {
-              className: "w-16 h-16 rounded-full bg-gray-100 shadow-lg",
+              className: "w-16 h-16 relative",
               animate: {
                 boxShadow: [
-                  "0 0 20px rgba(255,255,255,0.3)",
-                  "0 0 30px rgba(255,255,255,0.5)",
-                  "0 0 20px rgba(255,255,255,0.3)"
+                  "0 0 20px var(--color-moon-glow)",
+                  "0 0 30px var(--color-moon-glow)",
+                  "0 0 20px var(--color-moon-glow)"
                 ]
               },
               transition: {
@@ -614,6 +1136,12 @@ const WeatherAnimation = () => {
                 ease: "easeInOut"
               },
               children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full h-full rounded-full bg-gradient-to-br from-gray-100 to-gray-300 relative overflow-hidden", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: `absolute inset-0 bg-gray-900 transition-all duration-1000 ${getMoonPhase() === "new" ? "opacity-95" : getMoonPhase() === "waxingCrescent" ? "clip-path-crescent-right opacity-90" : getMoonPhase() === "firstQuarter" ? "clip-path-half-right opacity-90" : getMoonPhase() === "waxingGibbous" ? "clip-path-gibbous-right opacity-90" : getMoonPhase() === "full" ? "opacity-0" : getMoonPhase() === "waningGibbous" ? "clip-path-gibbous-left opacity-90" : getMoonPhase() === "lastQuarter" ? "clip-path-half-left opacity-90" : "clip-path-crescent-left opacity-90"}`
+                  }
+                ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-2 left-3 w-2 h-2 bg-gray-400 rounded-full opacity-30" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-6 right-2 w-1 h-1 bg-gray-400 rounded-full opacity-40" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-3 left-2 w-1.5 h-1.5 bg-gray-400 rounded-full opacity-35" })
@@ -6037,6 +6565,47 @@ const SettingsPanel = () => {
   );
 };
 
+const DraggableComponent = ({
+  children,
+  defaultPosition = { x: 0, y: 0 },
+  onDragEnd,
+  className = "",
+  dragConstraints
+}) => {
+  const [isDragging, setIsDragging] = reactExports.useState(false);
+  const dragControls = useDragControls();
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+  const handleDragEnd = (_, info) => {
+    setIsDragging(false);
+    if (onDragEnd) {
+      onDragEnd({ x: info.point.x, y: info.point.y });
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    motion.div,
+    {
+      drag: true,
+      dragControls,
+      dragMomentum: false,
+      dragConstraints,
+      onDragStart: handleDragStart,
+      onDragEnd: handleDragEnd,
+      initial: defaultPosition,
+      className: `${className} ${isDragging ? "cursor-grabbing" : "cursor-grab"}`,
+      whileHover: { scale: 1.02 },
+      whileTap: { scale: 0.98 },
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 30
+      },
+      children
+    }
+  );
+};
+
 function App() {
   const {
     isOnboarded,
@@ -6083,34 +6652,57 @@ function App() {
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative z-10 min-h-screen", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "container mx-auto px-6 py-8", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        motion.div,
+        DraggableComponent,
         {
-          initial: { opacity: 0, y: -20 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.6 },
-          className: "mb-8",
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Greeting, {})
+          defaultPosition: { x: 0, y: 0 },
+          dragConstraints: { top: 0, left: 0, right: window.innerWidth - 300, bottom: window.innerHeight - 100 },
+          className: "mb-8 w-max",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            motion.div,
+            {
+              initial: { opacity: 0, y: -20 },
+              animate: { opacity: 1, y: 0 },
+              transition: { duration: 0.6 },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Greeting, {})
+            }
+          )
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-4 gap-8 h-[calc(100vh-200px)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-[calc(100vh-200px)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          motion.div,
+          DraggableComponent,
           {
-            initial: { opacity: 0, x: -20 },
-            animate: { opacity: 1, x: 0 },
-            transition: { duration: 0.6, delay: 0.2 },
-            className: "xl:col-span-3",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(FeedGrid, {})
+            defaultPosition: { x: 0, y: 0 },
+            dragConstraints: { top: 0, left: 0, right: window.innerWidth - 800, bottom: window.innerHeight - 600 },
+            className: "absolute",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.div,
+              {
+                initial: { opacity: 0, x: -20 },
+                animate: { opacity: 1, x: 0 },
+                transition: { duration: 0.6, delay: 0.2 },
+                className: "w-[800px]",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(FeedGrid, {})
+              }
+            )
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          motion.div,
+          DraggableComponent,
           {
-            initial: { opacity: 0, x: 20 },
-            animate: { opacity: 1, x: 0 },
-            transition: { duration: 0.6, delay: 0.4 },
-            className: "xl:col-span-1",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskPanel, {})
+            defaultPosition: { x: window.innerWidth - 400, y: 0 },
+            dragConstraints: { top: 0, left: 0, right: window.innerWidth - 300, bottom: window.innerHeight - 400 },
+            className: "absolute",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.div,
+              {
+                initial: { opacity: 0, x: 20 },
+                animate: { opacity: 1, x: 0 },
+                transition: { duration: 0.6, delay: 0.4 },
+                className: "w-[300px]",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskPanel, {})
+              }
+            )
           }
         )
       ] })

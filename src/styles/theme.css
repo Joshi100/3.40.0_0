@@ -1,0 +1,62 @@
+:root {
+  /* Base Colors */
+  --color-primary: #4A90E2;
+  --color-secondary: #50E3C2;
+  --color-accent: #F39C12;
+  
+  /* Time-based Colors */
+  --color-dawn-start: #FFB347;
+  --color-dawn-mid: #FFCCCB;
+  --color-dawn-end: #87CEEB;
+  
+  --color-day-start: #87CEEB;
+  --color-day-mid: #98D8E8;
+  --color-day-end: #F0F8FF;
+  
+  --color-dusk-start: #FF6B6B;
+  --color-dusk-mid: #4ECDC4;
+  --color-dusk-end: #96CEB4;
+  
+  --color-night-start: #0F172A;
+  --color-night-mid: #1E293B;
+  --color-night-end: #334155;
+
+  /* Weather Elements */
+  --color-sun: #FFD700;
+  --color-sun-glow: rgba(255, 215, 0, 0.4);
+  --color-moon: #E1E1E1;
+  --color-moon-glow: rgba(225, 225, 225, 0.3);
+  --color-cloud: #FFFFFF;
+  --color-rain: rgba(255, 255, 255, 0.6);
+  --color-snow: #FFFFFF;
+
+  /* Animation Timings */
+  --transition-slow: 1000ms;
+  --transition-medium: 500ms;
+  --transition-fast: 300ms;
+
+  /* Sizes */
+  --sun-moon-size: 4rem;
+  --hour-marker-size: 4px;
+  --arc-height: 30vh;
+  
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] {
+  --color-primary: #6BA5E7;
+  --color-secondary: #64EBD1;
+  --color-accent: #F7AB39;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sun-moon-size: 3rem;
+    --hour-marker-size: 3px;
+    --arc-height: 25vh;
+  }
+}

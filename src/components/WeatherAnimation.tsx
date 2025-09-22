@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import * as SunCalc from 'suncalc'
 import { useAppStore } from '@/store/appStore'
@@ -8,6 +8,19 @@ interface SunMoonPosition {
   y: number
   phase: 'dawn' | 'day' | 'dusk' | 'night'
   progress: number
+  moonPhase?: 'new' | 'waxingCrescent' | 'firstQuarter' | 'waxingGibbous' | 'full' | 'waningGibbous' | 'lastQuarter' | 'waningCrescent'
+}
+
+// Calculate the SVG path for the sun/moon arc
+const calculateArcPath = (width: number, height: number): string => {
+  const startX = 0
+  const startY = height
+  const endX = width
+  const endY = height
+  const controlX = width / 2
+  const controlY = 0
+  
+  return `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`
 }
 
 const WeatherAnimation: React.FC = () => {
@@ -106,8 +119,65 @@ const WeatherAnimation: React.FC = () => {
     }
   }
 
+  // Calculate moon phase
+  const getMoonPhase = () => {
+    const now = new Date()
+    const moonIllumination = SunCalc.getMoonIllumination(now)
+    const phase = moonIllumination.phase
+
+    if (phase <= 0.05 || phase > 0.95) return 'new'
+    if (phase <= 0.20) return 'waxingCrescent'
+    if (phase <= 0.30) return 'firstQuarter'
+    if (phase <= 0.45) return 'waxingGibbous'
+    if (phase <= 0.55) return 'full'
+    if (phase <= 0.70) return 'waningGibbous'
+    if (phase <= 0.80) return 'lastQuarter'
+    return 'waningCrescent'
+  }
+
+  // Generate hour markers along the arc
+  const hourMarkers = useMemo(() => {
+    return Array.from({ length: 24 }, (_, i) => {
+      const progress = i / 23
+      const x = progress * 100
+      const y = 50 - Math.sin(progress * Math.PI) * 30
+      return { x, y, hour: i }
+    })
+  }, [])
+
   return (
     <div className={`fixed inset-0 ${getBackgroundGradient()} transition-all duration-1000`}>
+      {/* SVG Arc Path */}
+      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" className="text-yellow-300" />
+            <stop offset="50%" className="text-orange-400" />
+            <stop offset="100%" className="text-yellow-300" />
+          </linearGradient>
+        </defs>
+        
+        {/* Arc Path */}
+        <path
+          d={calculateArcPath(100, 50)}
+          fill="none"
+          stroke="rgba(255,255,255,0.1)"
+          strokeWidth="2"
+          className="transform scale-100"
+        />
+
+        {/* Hour Markers */}
+        {hourMarkers.map(({ x, y, hour }) => (
+          <circle
+            key={hour}
+            cx={`${x}%`}
+            cy={`${y}%`}
+            r="4"
+            className="fill-white/20"
+          />
+        ))}
+      </svg>
+
       {/* Clouds */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
@@ -115,9 +185,9 @@ const WeatherAnimation: React.FC = () => {
           style={{ left: '-100px' }}
         >
           <svg width="120" height="60" viewBox="0 0 120 60" fill="none">
-            <ellipse cx="30" cy="40" rx="25" ry="15" fill="white" opacity="0.8" />
-            <ellipse cx="60" cy="35" rx="35" ry="20" fill="white" opacity="0.9" />
-            <ellipse cx="90" cy="40" rx="25" ry="15" fill="white" opacity="0.8" />
+            <ellipse cx="30" cy="40" rx="25" ry="15" className="fill-cloud" opacity="0.8" />
+            <ellipse cx="60" cy="35" rx="35" ry="20" className="fill-cloud" opacity="0.9" />
+            <ellipse cx="90" cy="40" rx="25" ry="15" className="fill-cloud" opacity="0.8" />
           </svg>
         </motion.div>
 
@@ -162,12 +232,12 @@ const WeatherAnimation: React.FC = () => {
         {sunMoonPos.phase === 'night' ? (
           // Moon
           <motion.div
-            className="w-16 h-16 rounded-full bg-gray-100 shadow-lg"
+            className="w-16 h-16 relative"
             animate={{
               boxShadow: [
-                '0 0 20px rgba(255,255,255,0.3)',
-                '0 0 30px rgba(255,255,255,0.5)',
-                '0 0 20px rgba(255,255,255,0.3)'
+                '0 0 20px var(--color-moon-glow)',
+                '0 0 30px var(--color-moon-glow)',
+                '0 0 20px var(--color-moon-glow)'
               ]
             }}
             transition={{
@@ -177,7 +247,21 @@ const WeatherAnimation: React.FC = () => {
             }}
           >
             <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-100 to-gray-300 relative overflow-hidden">
-              {/* Moon craters */}
+              {/* Moon phases */}
+              <div 
+                className={`absolute inset-0 bg-gray-900 transition-all duration-1000 ${
+                  getMoonPhase() === 'new' ? 'opacity-95' :
+                  getMoonPhase() === 'waxingCrescent' ? 'clip-path-crescent-right opacity-90' :
+                  getMoonPhase() === 'firstQuarter' ? 'clip-path-half-right opacity-90' :
+                  getMoonPhase() === 'waxingGibbous' ? 'clip-path-gibbous-right opacity-90' :
+                  getMoonPhase() === 'full' ? 'opacity-0' :
+                  getMoonPhase() === 'waningGibbous' ? 'clip-path-gibbous-left opacity-90' :
+                  getMoonPhase() === 'lastQuarter' ? 'clip-path-half-left opacity-90' :
+                  'clip-path-crescent-left opacity-90'
+                }`}
+              />
+              
+              {/* Moon craters - visible based on phase */}
               <div className="absolute top-2 left-3 w-2 h-2 bg-gray-400 rounded-full opacity-30" />
               <div className="absolute top-6 right-2 w-1 h-1 bg-gray-400 rounded-full opacity-40" />
               <div className="absolute bottom-3 left-2 w-1.5 h-1.5 bg-gray-400 rounded-full opacity-35" />
